@@ -1,0 +1,52 @@
+# Checkpoint name will have the same name as this file
+
+dataset: 'kitti'
+model_name: 'instamon'
+allow_gpu_mem_growth: True
+
+dataset_config:
+    dataset_type: 'kitti_obj'
+
+    use_mscnn_detections: False
+    mscnn_thr: [0.7, 0.7]
+    mscnn_instance_version: 'igloo'
+
+    use_srgt_masks: False
+
+    batch_size: 1
+    oversample: True
+
+    num_boxes: 18
+
+    classes: ['Pedestrian', 'Cyclist']
+
+    # Object Filtering
+    obj_filter_config:
+        # Note: Object types filtered based on classes
+        difficulty_str: 'hard'
+        box_2d_height: !!null
+        truncation: 0.3
+        occlusion: !!null
+        depth_range: [5, 45]
+
+    # Augmentation
+    aug_config:
+        use_image_aug: False
+        use_box_jitter: True
+        jitter_iou: 0.85
+
+    clip_depth_map_edge: False
+
+    name: 'kitti'
+    dataset_dir: '~/Kitti/object'
+    data_split: 'train'
+    data_split_dir: 'training'
+    has_kitti_labels: True
+
+    depth_version: 'multiscale'  # wavedata, bilateral, multiscale
+    disp_version: 'multiscale'
+    instance_version: 'depth_2_multiscale'  # depth_2_wavedata, depth_2_multiscale
+
+    roi_size: [192, 192]
+    disp_range: [-64, 96]
+    disp_scale_factor: 1.0

@@ -1,0 +1,8 @@
+data/*
+*.pyc
+*.tar
+*.csv
+.idea/
+pcl*
+src/build/*
+src/faster_rcnn_pytorch/lib/build/*

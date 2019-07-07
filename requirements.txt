@@ -1,0 +1,16 @@
+torchvision==0.2.0
+torch==1.0.1.post2
+numpy
+scikit-image
+opencv-python
+pyyaml
+pypng
+tensorboardX
+cython
+cffi
+scipy
+msgpack
+easydict
+matplotlib
+pyyaml
+matplotlib
