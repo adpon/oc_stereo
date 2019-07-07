@@ -94,7 +94,6 @@ def main():
     resize_dims = [128, 128]
 
     use_masks = True
-    dist_thresh = 120.0
     height_thresh = 25.0
 
     det_method = 'mscnn'
@@ -181,7 +180,6 @@ def main():
         init_time = time.time()
 
         if use_masks:
-
             # Calculate height of bounding boxes
             img2_boxes_height = (boxes_img2[:, 2] - boxes_img2[:, 0])
             img3_boxes_height = (boxes_img3[:, 2] - boxes_img3[:, 0])
@@ -194,9 +192,14 @@ def main():
             height_matrix = np.abs(img2_boxes_height[:, np.newaxis] - img3_boxes_height)
             centre_matrix = np.abs(img2_boxes_h_centres[:, np.newaxis] - img3_boxes_h_centres)
 
+            # Adaptive threshold calculated using KITTI statistics
+            centre_max_dist = img2_boxes_height * 0.47065569 - 6.0545125 + 10.0
+            centre_max_dist = np.reshape(centre_max_dist, (-1, 1))
+            centre_min_dist = 0
+
             # Create a mask to help with histogram scoring
             height_mask = height_matrix < height_thresh
-            centre_mask = centre_matrix < dist_thresh
+            centre_mask = (centre_matrix < centre_max_dist) * (centre_matrix > centre_min_dist)
 
             mask = height_mask & centre_mask
 
@@ -221,27 +224,42 @@ def main():
         img2_crops = get_image_crops(boxes_img2, img2, resize_dims=resize_dims)
         img3_crops = get_image_crops(boxes_img3, img3, resize_dims=resize_dims)
 
-        # Compute SSIM
-        scores = np.zeros([num_boxes_img2, num_boxes_img3])
-        for img2_idx, img2_crop in enumerate(img2_crops):
-            for img3_idx, img3_crop in enumerate(img3_crops):
-                if scores[img2_idx, img3_idx] != 0:
-                    continue
-                score = measure.compare_ssim(img2_crop, img3_crop, multichannel=True)
+        # If only 1 box in each, do not compute SSIM
+        if num_boxes_img2 == 1 and num_boxes_img3 == 1:
+            if mask[0][0]:
+                corr_boxes = zip(boxes_img2, boxes_img3)
+            else:
+                # Save empty boxes
+                np.savetxt(output_path_2, [],
+                           newline='\r\n', fmt='%s')
 
-                scores[img2_idx, img3_idx] = score
-
-        # Compare histograms
-        if num_boxes_img2 < num_boxes_img3:
-
-            matches = find_matches(scores, mask)
-            matched_boxes_img3 = boxes_img3[matches]
-            corr_boxes = zip(boxes_img2, matched_boxes_img3)
-
+                np.savetxt(output_path_3, [],
+                           newline='\r\n', fmt='%s')
+                continue
         else:
-            matches = find_matches(scores.T, mask.T)
-            matched_boxes_img2 = boxes_img2[matches]
-            corr_boxes = zip(matched_boxes_img2, boxes_img3)
+            # Compute SSIM
+            scores = np.zeros([num_boxes_img2, num_boxes_img3])
+            for img2_idx, img2_crop in enumerate(img2_crops):
+                for img3_idx, img3_crop in enumerate(img3_crops):
+                    if scores[img2_idx, img3_idx] != 0:
+                        continue
+                    if not mask[img2_idx, img3_idx]:
+                        continue
+                    score = measure.compare_ssim(img2_crop, img3_crop, multichannel=True)
+
+                    scores[img2_idx, img3_idx] = score
+
+            # Compare histograms
+            if num_boxes_img2 < num_boxes_img3:
+
+                matches = find_matches(scores, mask)
+                matched_boxes_img3 = boxes_img3[matches]
+                corr_boxes = zip(boxes_img2, matched_boxes_img3)
+
+            else:
+                matches = find_matches(scores.T, mask.T)
+                matched_boxes_img2 = boxes_img2[matches]
+                corr_boxes = zip(matched_boxes_img2, boxes_img3)
 
         time_elapsed = time.time() - init_time
         total_time.append(time_elapsed)
