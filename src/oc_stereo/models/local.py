@@ -1,7 +1,7 @@
+"""Adapted from https://github.com/JiaRenChang/PSMNet"""
 from __future__ import print_function
 import math
 
-# from prroi_pool.functional import prroi_pool2d
 from faster_rcnn_pytorch.lib.model.roi_layers import ROIAlign
 import torch
 import torch.nn as nn
@@ -173,7 +173,7 @@ class PSMNet(nn.Module):
 
         # Take crops from full image
         roi_align = ROIAlign((local_feature_size[0], local_feature_size[1]),
-                             1.0/(4.0 * full_img_downsample_scale), 2)
+                             1.0 / (4.0 * full_img_downsample_scale), 2)
 
         crop_imgL = roi_align(full_refimg_fea, rois_l)
         crop_imgR = roi_align(full_targetimg_fea, rois_r)

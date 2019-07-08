@@ -1,6 +1,5 @@
 import yaml
 
-import oc_stereo
 from oc_stereo.core import config_utils
 from oc_stereo.dataloader.kitti.kitti_dataset import KittiDataset
 

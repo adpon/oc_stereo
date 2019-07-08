@@ -1,3 +1,4 @@
+"""Adapted from https://github.com/JiaRenChang/PSMNet"""
 from __future__ import print_function
 import argparse
 import csv
@@ -286,8 +287,12 @@ def train(sample_dict, global_step):
 
     # Convert disparity to point cloud
     pred_global_disps = pred_global_disps * instance_masks
-    pred_xyz = calib_utils.torch_pc_from_disparity(pred_global_disps, stereo_calib_f, stereo_calib_b,
-                                                   stereo_calib_center_u, stereo_calib_center_v)
+    pred_xyz = calib_utils.torch_pc_from_disparity(
+        pred_global_disps,
+        stereo_calib_f,
+        stereo_calib_b,
+        stereo_calib_center_u,
+        stereo_calib_center_v)
 
     # XYZ loss
     num_valid_points = torch.sum(instance_masks)

@@ -26,9 +26,8 @@ python setup.py build develop
 ```
 
 ## Training
-For KITTI Object Detection dataset training
-* Download the dataset and place it at `~/Kitti/object`
-* Download the custom datasplits and place them into `~/Kitti/object`
+* Download the [KITTI Object Detection dataset](http://www.cvlibs.net/datasets/kitti/eval_object.php?obj_benchmark=3d) and place it in your home directory
+* Place the attached custom data splits and place them into `~/Kitti/object`
 The folder structure should be like:
 ```
 Kitti
@@ -43,7 +42,15 @@ Kitti
         train.txt
         val.txt
 ```
-* Download our pretrained model here and place it in `data/pretrained`
-* Get the MS-CNN detections here and place them in `data/mscnn` or run MS-CNN and use our box 
-association algorithm
-* Download the SRGT instance masks and our instance masks here
+* Due to space constraints, a pre-trained model is not attached. However, you can try using 
+a pretrained model from [PSMNet](https://github.com/JiaRenChang/PSMNet) and place the model in 
+`data/pretrained`
+* Run [MS-CNN](https://github.com/zhaoweicai/mscnn) and convert the detections to KITTI format 
+and place them as `data/mscnn/kitti_fmt`. Due to space constraints, these detections are also not
+ atttached, but will be released on acceptance.
+* Download the SRGT instance masks [here](http://liangchiehchen.com/projects/beat_the_MTurkers.html) and place them as `~/Kitti/object/training/instance_2_srgt`
+* Generate our instance masks using `python src/oc_stereo/utils/gen_instance_masks.py` and place the outputs as `~/Kitti/object/training/instance_2_depth_2_multiscale`
+* Obtain the instance masks that match to the MS-CNN detections using 
+`python src/oc_stereo/utils/save_match_instance_mask.py`
+* Run training using `python src/oc_stereo/experiments/train.py`
+* Produce disparity maps using `python src/oc_stereo/experiments/inference.py`

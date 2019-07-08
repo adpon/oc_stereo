@@ -1,11 +1,9 @@
-import copy
 import os
 
 import cv2
 import numpy as np
 
 from oc_stereo.builders.config_builder_util import ConfigObj
-
 from oc_stereo.dataloader.kitti import calib_utils, depth_map_utils, instance_utils, evaluation
 
 # KITTI difficulty thresholds (easy, moderate, hard)
@@ -592,44 +590,6 @@ def get_depth_map_point_cloud(sample_name, frame_calib, depth_dir):
     return point_cloud.astype(np.float32)
 
 
-def get_road_plane(sample_name, planes_dir):
-    """Reads the ground plane from file
-
-    Args:
-        sample_name: sample name
-        planes_dir: planes directory
-
-    Returns:
-        normalized plane coefficients [a, b, c, d] satisfying ax+by+cz+d=0
-    """
-
-    plane_file = planes_dir + '/{}.txt'.format(sample_name)
-
-    with open(plane_file, 'r') as input_file:
-        lines = input_file.readlines()
-        input_file.close()
-
-    # Plane coefficients stored in 4th row
-    lines = lines[3].split()
-
-    # Convert str to float
-    lines = [float(i) for i in lines]
-
-    plane = np.asarray(lines)
-
-    # Ensure normal is always facing up.
-    # In Kitti's frame of reference, +y is down
-    if plane[1] > 0:
-        plane = -plane
-        raise ValueError('Plane is facing downwards')
-
-    # Normalize the plane coefficients
-    norm = np.linalg.norm(plane[0:3])
-    plane = plane / norm
-
-    return plane
-
-
 def compute_obj_label_corners_3d(object_label):
     """
     Computes the 3D bounding box corner positions from an ObjectLabel
@@ -662,128 +622,6 @@ def compute_obj_label_corners_3d(object_label):
     corners_3d[2, :] = corners_3d[2, :] + object_label.t[2]
 
     return corners_3d
-
-
-# TODO: Move to box_3d_projector?
-def project_corners_3d_to_image(corners_3d, p):
-    """Computes the 3D bounding box projected onto
-    image space.
-
-    Keyword arguments:
-    obj -- object file to draw bounding box
-    p -- transform matrix
-
-    Returns:
-        corners : numpy array of corner points projected
-        onto image space.
-        face_idx: numpy array of 3D bounding box face
-    """
-    # index for 3d bounding box face
-    # it is converted to 4x4 matrix
-    face_idx = np.array([0, 1, 5, 4,  # front face
-                         1, 2, 6, 5,  # right face
-                         2, 3, 7, 6,  # back face
-                         3, 0, 4, 7]).reshape((4, 4))  # left face
-    return calib_utils.project_pc_to_image(corners_3d, p), face_idx
-
-
-def points_in_img_filter(points_in_img, image_shape):
-    # Filter based on the given image size
-    image_filter = (points_in_img[0] >= 0) & (points_in_img[0] < image_shape[1]) & \
-                   (points_in_img[1] >= 0) & (points_in_img[1] < image_shape[0])
-
-    return image_filter
-
-
-def filter_pc_to_image(point_cloud, points_in_img, image_shape):
-    image_filter = points_in_img_filter(points_in_img, image_shape)
-
-    return point_cloud[:, image_filter], image_filter
-
-
-def is_point_inside(points, box_corners):
-    """Check if each point in a 3D point cloud lies within the 3D bounding box
-
-    If we think of the bounding box as having bottom face
-    defined by [P1, P2, P3, P4] and top face [P5, P6, P7, P8]
-    then there are three directions on a perpendicular edge:
-        u = P1 - P2
-        v = P1 - P4
-        w = P1 - P5
-
-    A point x lies within the box when the following constraints
-    are respected:
-        - The dot product u.x is between u.P1 and u.P2
-        - The dot product v.x is between v.P1 and v.P4
-        - The dot product w.x is between w.P1 and w.P5
-
-    :param points: 3D point cloud to test in the form [[x1...xn],[y1...yn],[z1...zn]]
-    :param box_corners: 3D corners of the bounding box
-
-    :return bool mask of which points are within the bounding box.
-            Use numpy function .all() to check all points
-    """
-
-    p1 = box_corners[:, 0]
-    p2 = box_corners[:, 1]
-    p4 = box_corners[:, 3]
-    p5 = box_corners[:, 4]
-
-    u = p2 - p1
-    v = p4 - p1
-    w = p5 - p1
-
-    # if u.P1 < u.x < u.P2
-    u_dot_x = np.dot(u, points)
-    u_dot_p1 = np.dot(u, p1)
-    u_dot_p2 = np.dot(u, p2)
-
-    # if v.P1 < v.x < v.P4
-    v_dot_x = np.dot(v, points)
-    v_dot_p1 = np.dot(v, p1)
-    v_dot_p2 = np.dot(v, p4)
-
-    # if w.P1 < w.x < w.P5
-    w_dot_x = np.dot(w, points)
-    w_dot_p1 = np.dot(w, p1)
-    w_dot_p2 = np.dot(w, p5)
-
-    point_mask = (u_dot_p1 < u_dot_x) & (u_dot_x < u_dot_p2) & \
-                 (v_dot_p1 < v_dot_x) & (v_dot_x < v_dot_p2) & \
-                 (w_dot_p1 < w_dot_x) & (w_dot_x < w_dot_p2)
-
-    return point_mask
-
-
-def get_area_filter(point_cloud, extents):
-    """
-
-    Args:
-        point_cloud: (3, N) point cloud
-        extents: 3D area in the form [[min_x, max_x], [min_y, max_y], [min_z, max_z]]
-
-    Returns:
-
-    """
-    if not isinstance(point_cloud, np.ndarray) and isinstance(extents, np.ndarray):
-        raise TypeError('point_cloud and extents must be of type np.ndarray')
-
-    extents_filter = \
-        (point_cloud[0] > extents[0, 0]) & \
-        (point_cloud[0] < extents[0, 1]) & \
-        (point_cloud[1] > extents[1, 0]) & \
-        (point_cloud[1] < extents[1, 1]) & \
-        (point_cloud[2] > extents[2, 0]) & \
-        (point_cloud[2] < extents[2, 1])
-
-    return extents_filter
-
-
-def filter_pc_to_area(point_cloud, area_extents):
-
-    area_filter = get_area_filter(point_cloud, area_extents)
-
-    return point_cloud[:, area_filter], area_filter
 
 
 def compute_box_3d_corners(box_3d):
@@ -862,79 +700,6 @@ def points_in_box_3d(box_3d, points):
     mask = np.logical_and(mask, mask_w)
 
     return points[mask], mask
-
-
-def get_viewing_angle_box_2d(box_2d, cam_p):
-    """Estimates the viewing angle towards an object given the 2D box and
-    camera projection matrix.
-
-    Args:
-        box_2d: 2D box [y1, x1, y2, x2]
-        cam_p: camera projection matrix
-
-    Returns:
-        viewing_angle: viewing angle to object
-    """
-    # Find centre of box
-    centre_x = np.mean(box_2d[[1, 3]])
-
-    centre_u = cam_p[0, 2]
-    focal_length = cam_p[0, 0]
-
-    # Assume depth of 1.0 to calculate viewing angle
-    # viewing_angle = atan2(i / f, 1.0)
-    viewing_angle = np.arctan2((centre_x - centre_u) / focal_length, 1.0)
-
-    return viewing_angle
-
-
-def get_viewing_angle_box_3d(box_3d, cam_p=None, version='x_offset'):
-    """Calculates the viewing angle to the centroid of a box_3d
-
-    Args:
-        box_3d: box_3d in cam_0 frame
-        cam_p: camera projection matrix, required if version is not 'cam_0'
-        version:
-            'cam_0': assuming cam_0 frame
-            'x_offset': apply x_offset from camera baseline to cam_0
-            'projection': project centroid to image
-
-    Returns:
-        viewing_angle: viewing angle to box centroid
-    """
-    check_box_3d_format(box_3d)
-
-    if version == 'cam_0':
-        # Viewing angle in cam_0 frame
-        viewing_angle = np.arctan2(box_3d[0], box_3d[2])
-
-    elif version == 'x_offset':
-        # Get x offset (b_cam) from calibration: cam_mat[0, 3] = (-f_x * b_cam)
-        x_offset = -cam_p[0, 3] / cam_p[0, 0]
-
-        # Shift box_3d from cam_0 to cam_N frame
-        box_x_cam = box_3d[0] - x_offset
-
-        # Calculate viewing angle
-        viewing_angle = np.arctan2(box_x_cam, box_3d[2])
-
-    elif version == 'projection':
-        # Project centroid to the image
-        proj_uv = calib_utils.project_pc_to_image(box_3d[0:3].reshape(3, -1), cam_p)
-
-        centre_u = cam_p[0, 2]
-        focal_length = cam_p[0, 0]
-
-        centre_x = proj_uv[0][0]
-
-        # Assume depth of 1.0 to calculate viewing angle
-        # viewing_angle = atan2(i / f, 1.0)
-        viewing_angle = np.arctan2((centre_x - centre_u) / focal_length, 1.0)
-
-    else:
-        raise ValueError('Invalid version', version)
-
-    return viewing_angle
 
 
 def obj_label_to_kitti_fmt(obj_label):
@@ -1043,32 +808,3 @@ def object_label_to_box_3d(obj_label):
     box_3d[6] = obj_label.ry
 
     return box_3d
-
-
-def boxes_2d_to_iou_fmt(boxes_2d):
-    """Converts a list of boxes_2d [y1, x1, y2, x2] to
-    iou format [x1, y1, x2, y2]"""
-    boxes_2d = np.asarray(boxes_2d)
-    boxes_2d_iou_fmt = boxes_2d[:, [1, 0, 3, 2]]
-    return boxes_2d_iou_fmt
-
-
-# TODO Remove dependency on this function
-def box_3d_to_3d_iou_format(boxes_3d):
-    """ Returns a numpy array of 3d box format for iou calculation
-    Args:
-        boxes_3d: list of 3d boxes
-    Returns:
-        new_anchor_list: numpy array of 3d box format for iou
-    """
-    boxes_3d = np.asarray(boxes_3d)
-    check_box_3d_format(boxes_3d)
-
-    iou_3d_boxes = np.zeros([len(boxes_3d), 7])
-    iou_3d_boxes[:, 4:7] = boxes_3d[:, 0:3]
-    iou_3d_boxes[:, 1] = boxes_3d[:, 3]
-    iou_3d_boxes[:, 2] = boxes_3d[:, 4]
-    iou_3d_boxes[:, 3] = boxes_3d[:, 5]
-    iou_3d_boxes[:, 0] = boxes_3d[:, 6]
-
-    return iou_3d_boxes

@@ -1,13 +1,10 @@
 import fnmatch
 import os
 from PIL import Image
-import random
 
 import cv2
 import numpy as np
-import torch
 import torch.utils.data as data
-from torchvision import transforms
 
 import oc_stereo
 from oc_stereo.core import constants, box_3d_projector
@@ -393,8 +390,7 @@ class KittiDataset(data.Dataset):
             # Make boxes equal in height
             boxes_2d_left_same_height, boxes_2d_right_same_height \
                 = instance_utils.make_boxes_same_height(label_boxes_2d_left,
-                                                        label_boxes_2d_right,
-                                                        round=True)
+                                                        label_boxes_2d_right)
 
             inst_depth_crops, inst_valid_masks = instance_utils.np_instance_crop(
                 boxes_2d=boxes_2d_left_same_height,
@@ -439,8 +435,7 @@ class KittiDataset(data.Dataset):
             # Make boxes equal in height
             boxes_2d_left_same_height, boxes_2d_right_same_height \
                 = instance_utils.make_boxes_same_height(label_boxes_2d_left,
-                                                        label_boxes_2d_right,
-                                                        round=True)
+                                                        label_boxes_2d_right)
 
         else:
             raise ValueError('Invalid run mode', self.train_val_test)
@@ -458,7 +453,6 @@ class KittiDataset(data.Dataset):
         all_img_2_crops = []
         all_img_3_crops = []
         all_mask_crops = []
-        all_mask_rcnn_masks = []
         all_srgt_mask_crops = []
         all_local_gt_disp_maps = []
         all_global_gt_disp_maps = []
@@ -610,7 +604,6 @@ class KittiDataset(data.Dataset):
         full_img_2 = processed(full_img2_resized)
         full_img_3 = processed(full_img3_resized)
 
-        # TODO: Move to a function
         # Create RoIs (adjust boxes to cropping) by shifting x and y coordinates
         left_rois = np.copy(boxes_2d_left_same_height)
         right_rois = np.copy(boxes_2d_right_same_height)
