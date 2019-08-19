@@ -178,7 +178,7 @@ class PSMNet(nn.Module):
         crop_imgL = roi_align(full_refimg_fea, rois_l)
         crop_imgR = roi_align(full_targetimg_fea, rois_r)
 
-        # 1x1 conv
+        # Multiply features
         refimg_fea = crop_imgL * crop_refimg_fea
         targetimg_fea = crop_imgR * crop_targetimg_fea
 

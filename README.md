@@ -42,6 +42,7 @@ Kitti
         train.txt
         val.txt
 ```
+* NOTE: check the options in each Python script before running
 * Due to space constraints, a pre-trained model is not attached. However, you can try using 
 a pretrained model from [PSMNet](https://github.com/JiaRenChang/PSMNet) and place the model in 
 `data/pretrained`
@@ -52,5 +53,12 @@ and place them as `data/mscnn/kitti_fmt`. Due to space constraints, these detect
 * Generate our instance masks using `python src/oc_stereo/utils/gen_instance_masks.py` and place the outputs as `~/Kitti/object/training/instance_2_depth_2_multiscale`
 * Obtain the instance masks that match to the MS-CNN detections using 
 `python src/oc_stereo/utils/save_match_instance_mask.py`
+
+### Generate Ground truth
+* Generate depth completed LiDAR maps `python src/oc_stereo/utils/save_lidar_depth_maps.py`
+* Place them in your Kitti folder
+* Convert these depth maps to disparity maps `python src/save_disp_from_depth.py`
+
+### Start Training and Inference
 * Run training using `python src/oc_stereo/experiments/train.py`
 * Produce disparity maps using `python src/oc_stereo/experiments/inference.py`

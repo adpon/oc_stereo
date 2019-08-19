@@ -199,6 +199,41 @@ def get_stereo_calibration(left_cam_mat, right_cam_mat):
     return stereo_calib
 
 
+def lidar_to_cam_frame(xyz_lidar, frame_calib):
+    """Transforms points in lidar frame to the reference camera (cam 0) frame
+
+    Args:
+        xyz_lidar: points in lidar frame
+        frame_calib: FrameCalib frame calibration
+
+    Returns:
+        ret_xyz: (N, 3) points in reference camera (cam 0) frame
+    """
+
+    # Pad the r0_rect matrix to a 4x4
+    r0_rect_mat = frame_calib.r0_rect
+    r0_rect_mat = np.pad(r0_rect_mat, ((0, 1), (0, 1)),
+                         'constant', constant_values=0)
+    r0_rect_mat[3, 3] = 1
+
+    # Pad the vel_to_cam matrix to a 4x4
+    tf_mat = frame_calib.velo_to_cam
+    tf_mat = np.pad(tf_mat, ((0, 1), (0, 0)),
+                    'constant', constant_values=0)
+    tf_mat[3, 3] = 1
+
+    # Pad the point cloud with 1's for the transformation matrix multiplication
+    one_pad = np.ones(xyz_lidar.shape[0]).reshape(-1, 1)
+    xyz_lidar = np.append(xyz_lidar, one_pad, axis=1)
+
+    # p_cam = P2 * (R0_rect * Tr_velo_to_cam * p_velo)
+    rectified = np.dot(r0_rect_mat, tf_mat)
+    ret_xyz = np.dot(rectified, xyz_lidar.T)
+
+    # Return (N, 3) points
+    return ret_xyz[0:3].T
+
+
 def pc_from_disparity(disp, stereo_calib, flatten_order='C'):
     """Transforms disparity map to 3d point cloud
 
