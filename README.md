@@ -46,9 +46,8 @@ Kitti
 * Due to space constraints, a pre-trained model is not attached. However, you can try using 
 a pretrained model from [PSMNet](https://github.com/JiaRenChang/PSMNet) and place the model in 
 `data/pretrained`
-* Run [MS-CNN](https://github.com/zhaoweicai/mscnn) and convert the detections to KITTI format 
-and place them as `data/mscnn/kitti_fmt`. Due to space constraints, these detections are also not
- atttached, but will be released on acceptance.
+* Run [MS-CNN](https://github.com/zhaoweicai/mscnn) or another 2D detection and convert the detections to KITTI format 
+and place them as `data/mscnn/kitti_fmt`.
 * Download the SRGT instance masks [here](http://liangchiehchen.com/projects/beat_the_MTurkers.html) and place them as `~/Kitti/object/training/instance_2_srgt`
 * Generate our instance masks using `python src/oc_stereo/utils/gen_instance_masks.py` and place the outputs as `~/Kitti/object/training/instance_2_depth_2_multiscale`
 * Obtain the instance masks that match to the MS-CNN detections using 
