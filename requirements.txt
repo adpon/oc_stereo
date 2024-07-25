@@ -1,5 +1,5 @@
 torchvision==0.2.0
-torch==1.0.1.post2
+torch==2.2.0
 numpy
 scikit-image
 opencv-python
